@@ -26,12 +26,14 @@ public class RedditImageGrabber {
     // if true, will brute force bypass HTTP error code 429
     private static final boolean bruteForce = false;
     
-    private static final String SUBREDDIT = "/user/Xiigen/m/wallpaperz";
+    private static final String SUBREDDIT = "/user/fmbalvarez/m/historypics";
     private static final String DL_PATH = "saved/";
     private static final String LINK_PATTERN = "https?:\\/\\/\\S+\\\">\\[link\\]";
+    private static final String ALT_PATTERN ="alt(.*?)title";
     private static final int NUM_TO_DL = 10;
     private static final int CHUNK_SIZE = 2048;
     private static final String USER_AGENT = "Mozilla/5.0";
+    private static int saved = 0;
 
     static {
         System.out.println("Getting " + NUM_TO_DL + " images from " + SUBREDDIT);
@@ -50,16 +52,19 @@ public class RedditImageGrabber {
                 dlFile.mkdirs();
             NodeList items = rss.getElementsByTagName("item");
             String link = null;
+            String alt = null;
             // iterate through the list of submissions, by order of 'hot' until limit reached or no more to dl
-            for(int i = 0, saved = 0; saved < NUM_TO_DL && i < items.getLength(); i++) {
+            for(int i = 0; saved < NUM_TO_DL && i < items.getLength(); i++) {
                 System.out.println(i + 1);
                 Element item = (Element) items.item(i);
                 Node description = item.getElementsByTagName("description").item(0); // should only be one description for each item
                 // find the link in the description
                 link = getLink(description.getTextContent());
+                alt = getAlt(description.getTextContent());
                 if(link.endsWith(".jpg") || link.endsWith(".png")) {
                     // the link is one we can download
-                    String dlPath = DL_PATH + (saved + 1) + (link.endsWith("pg") ? ".jpg" : ".png");
+                	// saves file with alt description as name
+                    String dlPath = DL_PATH + alt + (link.endsWith("pg") ? ".jpg" : ".png");
                     if(saveImage(link, dlPath)) {
                         System.out.println("Saved to " + dlPath);
                         saved++;
@@ -122,6 +127,28 @@ public class RedditImageGrabber {
         link = link.substring(0, link.length() - 8); // cuts off the end: ">[link]
         System.out.println("LINK: " + link);
         return link;
+    }
+    
+    // returns the alt description of the downloaded image
+    private static String getAlt(String description) {
+        Pattern pattern = Pattern.compile(ALT_PATTERN);
+        Matcher matcher = pattern.matcher(description);
+        matcher.find();
+        String alt = null;
+        try{
+        	alt = matcher.group();
+        	if(alt == null) {
+        		System.out.println("DESCRIPTION: " + description);
+        		return "ALT NOT FOUND";
+        	}
+        	alt = alt.substring(5);
+        	alt = alt.substring(0, alt.length() - 7);
+        } catch (IllegalStateException i){
+        	// if fails in getting alt description it saves the image with number of saved pictures
+        	alt = String.valueOf(saved);
+        }
+        System.out.println("ALT: " + alt);
+        return alt;
     }
 
     // gets the XML/RSS document tree for the given subreddit
