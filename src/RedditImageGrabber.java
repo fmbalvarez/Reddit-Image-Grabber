@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,7 +32,7 @@ public class RedditImageGrabber {
     private static final String DL_PATH = "saved/";
     private static final String LINK_PATTERN = "https?:\\/\\/\\S+\\\">\\[link\\]";
     private static final String ALT_PATTERN ="alt(.*?)title";
-    private static final int NUM_TO_DL = 10;
+    private static final int NUM_TO_DL = 20;
     private static final int CHUNK_SIZE = 2048;
     private static final String USER_AGENT = "Mozilla/5.0";
     private static int saved = 0;
@@ -61,10 +63,11 @@ public class RedditImageGrabber {
                 // find the link in the description
                 link = getLink(description.getTextContent());
                 alt = getAlt(description.getTextContent());
-                if(link.endsWith(".jpg") || link.endsWith(".png")) {
+                if(link.endsWith(".jpg") || link.endsWith(".png") || link.endsWith(".jpeg")) {
                     // the link is one we can download
                 	// saves file with alt description as name
-                    String dlPath = DL_PATH + alt + (link.endsWith("pg") ? ".jpg" : ".png");
+                    String fileFormat = getFileFormat(link);
+                    String dlPath = DL_PATH + alt + "." + fileFormat;
                     if(saveImage(link, dlPath)) {
                         System.out.println("Saved to " + dlPath);
                         saved++;
@@ -101,14 +104,11 @@ public class RedditImageGrabber {
             System.out.println("Caught IOException: " + e.getMessage());
             return false;
         }
-
         byte[] b = new byte[CHUNK_SIZE];
         int length;
-
         while ((length = in.read(b)) != -1) {
             out.write(b, 0, length);
         }
-
         in.close();
         out.close();
         return true;
@@ -151,6 +151,16 @@ public class RedditImageGrabber {
         return alt;
     }
 
+    // return the file format of the image
+    private static String getFileFormat(String link){
+        StringTokenizer tokenizer = new StringTokenizer(link,".");
+        ArrayList <String> tokens = new ArrayList();
+        while (tokenizer.hasMoreTokens()){
+            tokens.add(tokenizer.nextToken());
+        }
+        return tokens.get(tokens.size() - 1);
+    }
+
     // gets the XML/RSS document tree for the given subreddit
     private static Document getRSS(String subreddit) throws SAXException, IOException, ParserConfigurationException {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -158,5 +168,4 @@ public class RedditImageGrabber {
         Document doc = dBuilder.parse("http://www.reddit.com/" + subreddit + ".rss");
         return doc;
     }
-    
 }
