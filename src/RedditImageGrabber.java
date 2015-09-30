@@ -154,7 +154,7 @@ public class RedditImageGrabber {
     // return the file format of the image
     private static String getFileFormat(String link){
         StringTokenizer tokenizer = new StringTokenizer(link,".");
-        ArrayList <String> tokens = new ArrayList();
+        ArrayList <String> tokens = new ArrayList<String>();
         while (tokenizer.hasMoreTokens()){
             tokens.add(tokenizer.nextToken());
         }
